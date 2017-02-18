@@ -1,0 +1,159 @@
+using System;
+using System.Windows.Forms;
+using System.IO.Ports;
+using System.IO;
+namespace Serial_receive
+{
+    public partial class Form1 : Form
+    {
+        // All members variables should be placed here
+        // make it more readable, hopefully!
+        string t;
+        SerialPort sp;
+
+        public Form1()
+        {
+            InitializeComponent();
+            Control.CheckForIllegalCrossThreadCalls = false;
+
+            // User can already search for ports when the constructor of the FORM1 is calling 
+            // And let the user search ports again with a click
+            // Searching for ports function
+
+            SearchPorts();
+        }
+       //search button  
+        private void button1_Click(object sender, EventArgs e)
+        {
+            comboBox1.Items.Clear();
+            SearchPorts();
+        }
+        void SearchPorts()
+        {
+            string[] ports = SerialPort.GetPortNames();
+            foreach (string port in ports)
+            {
+                comboBox1.Items.Add(port);
+            }
+        }
+  
+        private void button2_Click(object sender, EventArgs e)
+        {
+            // Catch exception if it will be thrown so the user will see it in a message box
+            OpenCloseSerial();
+        }      
+        void OpenCloseSerial()
+        {
+            try
+            {
+                if (sp == null || sp.IsOpen == false)
+                {
+                    t = comboBox1.Text.ToString();
+                    sErial(t);
+                    button2.Text = "Close Serial port"; // button text
+                }
+                else
+                {
+                    sp.Close();
+                    button2.Text = "Connect and wait for inputs";   // button text
+
+                }
+            }
+            catch (Exception err)   // catching error message
+            {
+                MessageBox.Show(err.Message);   // displaying error message
+            }           
+        }
+      
+        void sErial(string Port_name)
+        {
+            try
+            {
+                sp = new SerialPort(Port_name, 115200, Parity.None, 8, StopBits.One);   // serial port parameters
+                sp.DataReceived += new SerialDataReceivedEventHandler(DataReceivedHandler);
+                sp.Open();
+            }
+            catch (Exception err)
+            {
+                throw (new SystemException(err.Message));
+            }
+        }
+//
+        private  void DataReceivedHandler(object sender,SerialDataReceivedEventArgs e)
+        {
+
+            // This below line is not need , sp is global (belongs to the class!!)
+            //SerialPort sp = (SerialPort)sender;
+            if (e.EventType == SerialData.Chars)
+            {
+                if (sp.IsOpen)
+                {
+                    string w = sp.ReadExisting();
+                    if (w != String.Empty)
+                    {
+                        Invoke(new Action(() => TextBox1.AppendText(w)));
+                    }
+                }
+            }
+        }
+
+        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (sp == null || sp.IsOpen == false)
+            {
+                OpenCloseSerial();
+            }
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            this.Text = "Serial Channel to FRDM-KW40Z";
+        }
+        //public void SaveMyFile()
+        //{
+        //    // Create a SaveFileDialog to request a path and file name to save to.
+        //    SaveFileDialog saveFile1 = new SaveFileDialog();
+
+        //    // Initialize the SaveFileDialog to specify the RTF extension for the file.
+        //    String fileName = "C:\\Users\varman\\Desktop\\Test.rtf"; //set this to your file you want
+        //    saveFile1.DefaultExt = "*Test.rtf";
+        //    saveFile1.Filter = "RTF Files|*.rtf";
+
+        //    // Determine if the user selected a file name from the saveFileDialog.
+        //    if (saveFile1.ShowDialog() == System.Windows.Forms.DialogResult.OK &&
+        //       saveFile1.FileName.Length > 0)
+        //    {
+        //        // Save the contents of the RichTextBox into the file.
+        //        TextBox1.SaveFile(saveFile1.FileName, TextBoxStreamType.PlainText);
+        //    }
+        //}
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            SaveFileDialog saveFileDialog1 = new SaveFileDialog();
+            saveFileDialog1.InitialDirectory = @"C:\Users\varman\Documents\";
+            saveFileDialog1.Title = "Save text Files";
+            saveFileDialog1.CheckFileExists = true;
+            saveFileDialog1.CheckPathExists = true;
+            saveFileDialog1.DefaultExt = "txt";
+            saveFileDialog1.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*";
+            saveFileDialog1.FilterIndex = 2;
+            saveFileDialog1.RestoreDirectory = true;
+
+            if (saveFileDialog1.ShowDialog() == DialogResult.OK)
+            {
+                string temperature = "Temperature";
+                string sorted = TextBox1.Text.Replace(temperature, Environment.NewLine + temperature);
+                sorted = sorted.Substring(sorted.IndexOf(temperature));
+                File.WriteAllText(saveFileDialog1.FileName, sorted);
+                Text += "\r\n";
+                TextBox1.Text = saveFileDialog1.FileName;
+            }
+        }
+
+        private void TextBox1_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+    }
+}
